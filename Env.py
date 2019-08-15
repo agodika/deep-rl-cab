@@ -46,11 +46,11 @@ class CabDriver():
 
 
     # Use this function if you are using architecture-2 
-    # def state_encod_arch2(self, state, action):
-    #     """convert the (state-action) into a vector so that it can be fed to the NN. This method converts a given state-action pair into a vector format. Hint: The vector is of size m + t + d + m + m."""
+    def state_encod_arch2(self, state, action):
+        """convert the (state-action) into a vector so that it can be fed to the NN. This method converts a given state-action pair into a vector format. Hint: The vector is of size m + t + d + m + m."""
 
         
-    #     return state_encod
+        return state_encod
 
 
     ## Getting number of requests
@@ -96,40 +96,40 @@ class CabDriver():
             
         return reward
 
-
+    def new_time(self, hour, day, hour_increment):
+        day_increment = int(hour_increment / t)
+        hour_increment = int(hour_increment % t)
+        new_hour = hour + hour_increment
+        new_day = day + day_increment
+        if (new_hour >= t):
+            new_hour = new_hour - t
+            new_day += 1
+        if (new_day >= d):
+            new_day = new_day - d
+        
+        return (new_hour, new_day)
 
     def next_state_func(self, state, action, Time_matrix):
-    """Takes state and action as input and returns next state"""
-    
-    new_loc= state[0]
-    new_time=state[1]
-    new_day=state[2]
-    
-    if action[0] == 0 and action[1] == 0: # (0, 0) tuple that represents ’no-ride’ action
-        new_time += 1
-        if (new_time == t ):
-            new_time= 0
-            new_day += 1
-            if (new_day == d):new_day = 0
-            
-        next_state=(new_loc,new_time,new_day)
+        """Takes state and action as input and returns next state"""
+
+        new_loc  = state[0]
+        new_time = state[1]
+        new_day  = state[2]
         
-    else: # When the driver chooses an action (p,q)
-        time_x_to_p = Time_matrix[state[0],action[0],state[1],state[2]]
-        time_p_to_q = Time_matrix[action[0],action[1],state[1],state[2]]
-        total_trans_time = time_x_to_p + time_p_to_q
+        if action[0] == 0 and action[1] == 0: # (0, 0) tuple that represents ’no-ride’ action
+            new_time, new_day = self.new_time(state[1], state[2], 1)
+            
+            next_state=(new_loc,new_time,new_day)
+            return next_state
+        else: # When the driver chooses an action (p,q)
+            time_x_to_p = Time_matrix[state[0], action[0], state[1], state[2]]
+            new_time, new_day = self.new_time(state[1], state[2], time_x_to_p)
+            time_p_to_q = Time_matrix[action[0], action[1], new_time, new_day]
+            total_trans_time = time_x_to_p + time_p_to_q
+            new_time, new_day = self.new_time(new_time, new_day, time_p_to_q)
 
-        if (new_time + total_trans_time > (t-1)): # if total time  > 23 (time index start from 0)
-            new_time = ( total_trans_time - ((t-1)-new_time) - 1 )
-            new_day += 1
-            if (new_day == d):new_day = 0 # reset day
-        else:
-            new_time = new_time + total_trans_time
-        next_state=(action[1],new_time,new_day)
-
-    return next_state
-
-
+            next_state=(action[1],new_time,new_day)
+            return next_state
 
 
     def reset(self):
