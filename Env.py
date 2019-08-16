@@ -34,13 +34,13 @@ class CabDriver():
         state_encod = np.zeros(m+t+d, dtype = int)
         
         for i in enumerate(state):
-        print(i)
-        if i[0] == 0:
-            state_encod[i[1]] = 1
-        elif i[0] == 1:
-            state_encod[m+i[1]] = 1
-        elif i[0] == 2:
-            state_encod[m+t+i[1]] = 1
+            #print(i)
+            if i[0] == 0:
+                state_encod[i[1]] = 1
+            elif i[0] == 1:
+                state_encod[m+i[1]] = 1
+            elif i[0] == 2:
+                state_encod[m+t+i[1]] = 1
 
         return state_encod
 
@@ -74,11 +74,12 @@ class CabDriver():
         if requests >15:
             requests =15
 
-        possible_actions_index = random.sample(range(1, (m-1)*m +1), requests) # (0,0) is not considered as customer request
+   
+        possible_actions_index = random.sample(range(1, (m-1)*m ), requests) # (0,0) is not considered as customer request
         actions = [self.action_space[i] for i in possible_actions_index]
 
         
-        actions.append([0,0])
+        actions.append(tuple((0, 0)))
 
         return possible_actions_index,actions   
 
@@ -99,35 +100,37 @@ class CabDriver():
 
 
     def next_state_func(self, state, action, Time_matrix):
-    """Takes state and action as input and returns next state"""
+        """Takes state and action as input and returns next state"""
     
-    new_loc= state[0]
-    new_time=state[1]
-    new_day=state[2]
-    
-    if action[0] == 0 and action[1] == 0: # (0, 0) tuple that represents ’no-ride’ action
-        new_time += 1
-        if (new_time == t ):
-            new_time= 0
-            new_day += 1
-            if (new_day == d):new_day = 0
-            
-        next_state=(new_loc,new_time,new_day)
-        
-    else: # When the driver chooses an action (p,q)
-        time_x_to_p = Time_matrix[state[0],action[0],state[1],state[2]]
-        time_p_to_q = Time_matrix[action[0],action[1],state[1],state[2]]
-        total_trans_time = time_x_to_p + time_p_to_q
+        new_loc= state[0]
+        new_time=state[1]
+        new_day=state[2]
 
-        if (new_time + total_trans_time > (t-1)): # if total time  > 23 (time index start from 0)
-            new_time = ( total_trans_time - ((t-1)-new_time) - 1 )
-            new_day += 1
-            if (new_day == d):new_day = 0 # reset day
-        else:
-            new_time = new_time + total_trans_time
-        next_state=(action[1],new_time,new_day)
+        if action[0] == 0 and action[1] == 0: # (0, 0) tuple that represents ’no-ride’ action
+            new_time += 1
+            if (new_time == t ):
+                new_time= 0
+                new_day += 1
+                if (new_day == d):
+                    new_day = 0
 
-    return next_state
+            next_state=(new_loc,new_time,new_day)
+
+        else: # When the driver chooses an action (p,q)
+            time_x_to_p = Time_matrix[state[0],action[0],state[1],state[2]]
+            time_p_to_q = Time_matrix[action[0],action[1],state[1],state[2]]
+            total_trans_time = time_x_to_p + time_p_to_q
+
+            if (new_time + total_trans_time > (t-1)): # if total time  > 23 (time index start from 0)
+                new_time = ( total_trans_time - ((t-1)-new_time) - 1 )
+                new_day += 1
+                if (new_day == d):
+                    new_day = 0 # reset day
+            else:
+                new_time = new_time + total_trans_time
+            next_state=(action[1],new_time,new_day)
+
+        return next_state
 
 
 
