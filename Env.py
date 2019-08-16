@@ -114,7 +114,7 @@ class CabDriver():
                 if (new_day == d):
                     new_day = 0
 
-            next_state=(new_loc,new_time,new_day)
+            next_state=(new_loc,int(new_time),new_day)
 
         else: # When the driver chooses an action (p,q)
             time_x_to_p = Time_matrix[state[0],action[0],state[1],state[2]]
@@ -128,7 +128,7 @@ class CabDriver():
                     new_day = 0 # reset day
             else:
                 new_time = new_time + total_trans_time
-            next_state=(action[1],new_time,new_day)
+            next_state=(action[1],int(new_time),new_day)
 
         return next_state
 
