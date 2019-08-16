@@ -32,24 +32,24 @@ class CabDriver():
     def state_encod_arch1(self, state):
         """convert the state into a vector so that it can be fed to the NN. This method converts a given state into a vector format. Hint: The vector is of size m + t + d."""
         state_encod = np.zeros(m+t+d, dtype = int)
-        
-        for i in enumerate(state):
-        print(i)
-        if i[0] == 0:
-            state_encod[i[1]] = 1
-        elif i[0] == 1:
-            state_encod[m+i[1]] = 1
-        elif i[0] == 2:
-            state_encod[m+t+i[1]] = 1
-
+        current_loc, hour, day = state
+        state_encod[current_loc] = 1
+        state_encod[m + hour] = 1
+        state_encod[m + t + day] = 1
         return state_encod
 
 
     # Use this function if you are using architecture-2 
     def state_encod_arch2(self, state, action):
         """convert the (state-action) into a vector so that it can be fed to the NN. This method converts a given state-action pair into a vector format. Hint: The vector is of size m + t + d + m + m."""
-
-        
+        state_encod = np.zeros(m+t+d+m+m, dtype=int)
+        current_loc, hour, day = state
+        pick_up_loc, drop_off_loc = action
+        state_encod[current_loc] = 1
+        state_encod[m + hour] = 1
+        state_encod[m + t + day] = 1
+        state_encod[m + t + d + pick_up_loc] = 1
+        state_encod[m + t + d + m + drop_off_loc] = 1
         return state_encod
 
 
@@ -70,17 +70,16 @@ class CabDriver():
         elif location == 4:
             requests = np.random.poisson(8)
 
-
         if requests >15:
             requests =15
 
-        possible_actions_index = random.sample(range(1, (m-1)*m +1), requests) # (0,0) is not considered as customer request
+        possible_actions_index = random.sample(range(0, len(self.action_space)-1), requests) # (0,0) is not considered as customer request
         actions = [self.action_space[i] for i in possible_actions_index]
-
         
         actions.append([0,0])
+        possible_actions_index.append(len(self.action_space)-1)
 
-        return possible_actions_index,actions   
+        return possible_actions_index, actions
 
 
     def reward_func(self, state, action, Time_matrix):
@@ -89,10 +88,14 @@ class CabDriver():
         if action[0] == 0 and action[1] == 0:
             reward = -C
         else:
-            time_p_to_q = Time_matrix[action[0],action[1],state[1],state[2]]
-            time_x_to_p = Time_matrix[state[0],action[0],state[1],state[2]]
-            
-            reward = R*time_p_to_q - C*(time_p_to_q + time_x_to_p)
+            time_x_to_p = Time_matrix[state[0], action[0], state[1], state[2]]
+            new_time, new_day = self.new_time(state[1], state[2], time_x_to_p)
+            time_p_to_q = Time_matrix[action[0], action[1], new_time, new_day]
+            total_trans_time = time_x_to_p + time_p_to_q
+
+            # Cab driver can only take requests every hour. If the time taken for this action 
+            # is 0 as per the time_matrix, then we need to account for the reward and cost accordingly
+            reward = R*time_p_to_q - C*max(1, time_p_to_q + time_x_to_p)
             
         return reward
 
@@ -127,6 +130,12 @@ class CabDriver():
             time_p_to_q = Time_matrix[action[0], action[1], new_time, new_day]
             total_trans_time = time_x_to_p + time_p_to_q
             new_time, new_day = self.new_time(new_time, new_day, time_p_to_q)
+
+            # Cab driver can only take requests every hour. If the time taken for this action 
+            # is 0 as per the time_matrix, then we need to account for the next set of requests
+            # coming at the next hour mark
+            if (new_time == state[1] and new_day == state[2]):
+                new_time, new_day = self.new_time(state[1], state[2], 1)
 
             next_state=(action[1],new_time,new_day)
             return next_state
