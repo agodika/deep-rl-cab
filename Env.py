@@ -28,21 +28,14 @@ class CabDriver():
 
 
     ## Encoding state (or state-action) for NN input
-
     def state_encod_arch1(self, state):
         """convert the state into a vector so that it can be fed to the NN. This method converts a given state into a vector format. Hint: The vector is of size m + t + d."""
         state_encod = np.zeros(m+t+d, dtype = int)
-        
-        for i in enumerate(state):
-            #print(i)
-            if i[0] == 0:
-                state_encod[i[1]] = 1
-            elif i[0] == 1:
-                state_encod[m+i[1]] = 1
-            elif i[0] == 2:
-                state_encod[m+t+i[1]] = 1
-
-        return state_encod
+        current_loc, hour, day = state
+        state_encod[current_loc] = 1
+        state_encod[m + hour] = 1
+        state_encod[m + t + day] = 1
+        return state_encod.reshape((-1, 1))
 
 
     # Use this function if you are using architecture-2 
@@ -56,7 +49,7 @@ class CabDriver():
         state_encod[m + t + day] = 1
         state_encod[m + t + d + pick_up_loc] = 1
         state_encod[m + t + d + m + drop_off_loc] = 1
-        return state_encod
+        return state_encod.reshape((-1, 1))
 
 
     ## Getting number of requests
@@ -82,9 +75,8 @@ class CabDriver():
 
         possible_actions_index = random.sample(range(0, len(self.action_space)-1), requests) # (0,0) is not considered as customer request
         actions = [self.action_space[i] for i in possible_actions_index]
-
         
-        actions.append([0,0])
+        actions.append(tuple((0,0)))
         possible_actions_index.append(len(self.action_space)-1)
 
         return possible_actions_index, actions
@@ -131,7 +123,7 @@ class CabDriver():
             new_time, new_day = self.new_time(state[1], state[2], 1)
             
             next_state=(new_loc,int(new_time),new_day)
-            return next_state
+            return next_state, 1
         else: # When the driver chooses an action (p,q)
             time_x_to_p = Time_matrix[state[0], action[0], state[1], state[2]]
             new_time, new_day = self.new_time(state[1], state[2], time_x_to_p)
@@ -145,8 +137,8 @@ class CabDriver():
             if (new_time == state[1] and new_day == state[2]):
                 new_time, new_day = self.new_time(state[1], state[2], 1)
 
-            next_state=(action[1],int(new_time),new_day)
-            return next_state
+            next_state=(action[1], int(new_time), new_day)
+            return next_state, max(1, total_trans_time)
 
 
     def reset(self):
